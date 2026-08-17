@@ -1,0 +1,48 @@
+{
+    "name": "@plurnk/plurnk-schemes-http-tavily",
+    "version": "1.0.0",
+    "description": "Tavily Extract page materialization for plurnk's http scheme — the third-party pluggability showcase.",
+    "type": "module",
+    "license": "MIT",
+    "engines": {
+        "node": ">=26"
+    },
+    "plurnk": {
+        "kind": "http-materializer",
+        "materializers": [
+            {
+                "id": "tavily-extract",
+                "module": "dist/materializer.js"
+            }
+        ]
+    },
+    "exports": {
+        ".": "./dist/materializer.js"
+    },
+    "files": [
+        "dist/**/*",
+        ".env.defaults",
+        "README.md",
+        "SPEC.md"
+    ],
+    "scripts": {
+        "test:lint": "tsc --noEmit",
+        "test:unit": "npm run build:dist && node --conditions=plurnk-dev --test --env-file=.env.defaults src/**/*.test.ts",
+        "test": "npm run test:lint && npm run test:unit",
+        "build:clean": "rm -rf dist",
+        "build:dist": "tsc -p tsconfig.build.json",
+        "build": "npm run build:clean && npm run build:dist",
+        "prepack": "npm run build"
+    },
+    "dependencies": {
+        "@plurnk/plurnk-meta": "^1.7.0"
+    },
+    "peerDependencies": {
+        "@plurnk/plurnk-schemes-http": "^1.7.0"
+    },
+    "devDependencies": {
+        "@plurnk/plurnk-schemes-http": "file:../plurnk-service/plurnk-schemes-http",
+        "@types/node": "^24.0.0",
+        "typescript": "^5.9.0"
+    }
+}
