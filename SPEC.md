@@ -20,7 +20,7 @@ bounds the call. Success requires Markdown plus `request_id` and
 `usage.credits`; those facts remain durable in `header` as
 `x-plurnk-tavily-*` evidence.
 
-| Provider outcome                         | Classification | Body behavior when server HTML exists                  |
+| Provider outcome                         | Classification | `#readable` when server HTML exists                    |
 | ---------------------------------------- | -------------- | ------------------------------------------------------ |
 | Success with required evidence           | Success        | Use Tavily Markdown                                    |
 | Caller cancellation                      | Cancelled      | Throw the caller's abort reason; the framework returns exact `499` |

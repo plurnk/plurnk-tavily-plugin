@@ -7,6 +7,10 @@ materializer contract that `@plurnk/plurnk-schemes-http` selects.
 
 ## Install and enable
 
+The package ships with the plurnk service as a default dependency, so an
+ordinary service install already carries it. To install it beside a service that
+does not:
+
 ```sh
 npm install @plurnk/plurnk-schemes-http-tavily
 ```
@@ -17,11 +21,12 @@ PLURNK_SCHEMES_HTTP_MATERIALIZER=tavily-extract
 TAVILY_API_KEY=...
 ```
 
-Generic public HTML READs then produce the sanitized Tavily Markdown body while
-retaining the exact server source in `#html`; the entry header records the
-materializer identity and Tavily's request/usage evidence. Without the
-selection (or the key), the installed HTML projection produces the body
-unchanged.
+A generic public HTML READ then keeps the exact server source as the page's
+`body` and lands the sanitized Tavily Markdown as its `#readable` channel; the
+entry header records the materializer identity and Tavily's request/usage
+evidence, and every READ of the page names `#readable` with its tokens. Without
+the selection (or the key), the installed HTML projection produces `#readable`
+instead, and the page reads the same way.
 
 ## Configuration
 
