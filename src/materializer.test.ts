@@ -124,6 +124,7 @@ test("composition: the framework registry discovers this package and routes HTML
     process.env.PLURNK_SCHEMES_HTTP_FETCH_TIMEOUT = "30000";
     process.env.PLURNK_SCHEMES_HTTP_REDIRECTS = "5";
     process.env.PLURNK_SCHEMES_HTTP_ERROR_DETAIL_LIMIT = "512";
+    process.env.PLURNK_SCHEMES_HTTP_USER_AGENT = "plurnk-schemes-http-tavily/test";
     const { default: MaterializerRegistry } = await import("@plurnk/plurnk-schemes-http/materializer");
     const { WebFetcher } = await import("@plurnk/plurnk-schemes-http");
     const pkgDir = resolve(import.meta.dirname, "..");
@@ -132,7 +133,11 @@ test("composition: the framework registry discovers this package and routes HTML
     });
     const projection = {
         async readable() { return null; },
-        async readableBytes() { return null; },
+        async binary(chunks: AsyncIterable<Uint8Array>) {
+            const parts: Uint8Array[] = [];
+            for await (const chunk of chunks) parts.push(chunk);
+            return { bytes: Uint8Array.from(parts.flatMap((p) => [...p])), readable: null, projectionIdentity: "test-projection" };
+        },
         async identity(mimetype: string) { return `${mimetype}-projection`; },
         async isBinary(mimetype: string) { return !mimetype.startsWith("text/"); },
         parseIssues: async () => undefined,
@@ -148,8 +153,9 @@ test("composition: the framework registry discovers this package and routes HTML
             const fetched = await new WebFetcher().fetch("https://93.184.216.34/x");
             assert.ok(fetched !== null);
             const materialized = await WebFetcher.materialize(fetched, projection);
-            assert.equal(materialized?.body?.content, "# Tavily composition body");
-            assert.equal(materialized?.html?.content, "<html><body>Origin</body></html>");
+            // The materializer's extraction is the page's #readable; body keeps the origin bytes.
+            assert.equal(materialized?.readable?.content, "# Tavily composition body");
+            assert.equal(materialized?.body?.content, "<html><body>Origin</body></html>");
             assert.match(materialized?.header ?? "", /x-plurnk-materializer-id: tavily-extract:v1:basic/);
             assert.match(materialized?.header ?? "", /x-plurnk-tavily-request-id: req-composed/);
         });
@@ -158,5 +164,6 @@ test("composition: the framework registry discovers this package and routes HTML
         delete process.env.PLURNK_SCHEMES_HTTP_FETCH_TIMEOUT;
         delete process.env.PLURNK_SCHEMES_HTTP_REDIRECTS;
         delete process.env.PLURNK_SCHEMES_HTTP_ERROR_DETAIL_LIMIT;
+        delete process.env.PLURNK_SCHEMES_HTTP_USER_AGENT;
     }
 });

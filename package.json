@@ -15,7 +15,7 @@
                 "module": "dist/materializer.js"
             }
         ],
-        "builtAgainst": "1.8.0"
+        "builtAgainst": "1.19.0"
     },
     "exports": {
         ".": "./dist/materializer.js"
@@ -28,7 +28,7 @@
     ],
     "scripts": {
         "test:lint": "tsc --noEmit",
-        "test:unit": "npm run build:dist && node --conditions=plurnk-dev --test --env-file=.env.defaults src/**/*.test.ts",
+        "test:unit": "npm run build:dist && node --test --env-file=.env.defaults src/**/*.test.ts",
         "test": "npm run test:lint && npm run test:unit",
         "build:clean": "rm -rf dist",
         "build:dist": "tsc -p tsconfig.build.json",
@@ -42,8 +42,8 @@
         "@plurnk/plurnk-schemes-http": "^1.8.0"
     },
     "devDependencies": {
-        "@plurnk/plurnk-schemes-http": "1.8.0",
-        "@types/node": "^24.0.0",
-        "typescript": "^5.9.0"
+        "@plurnk/plurnk-schemes-http": "1.19.0",
+        "@types/node": "^26.1.1",
+        "typescript": "^7.0.2"
     }
 }
