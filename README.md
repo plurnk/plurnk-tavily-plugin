@@ -1,25 +1,26 @@
-# @plurnk/plurnk-schemes-http-tavily
+# @plurnk/plurnk-tavily-plugin
 
-Tavily Extract page materialization for plurnk's `http(s)://` scheme — the
-documented showcase of third-party pluggability. This package owns zero scheme
-logic: it declares the `http-materializer` plugin family and implements the
-materializer contract that `@plurnk/plurnk-schemes-http` selects.
+An [Agent Plugin](https://agent-plugins.org/specification) supplying Tavily Extract
+page materialization for Plurnk's `http(s)://` resources. The portable manifest
+wraps a native Plurnk extension; the existing HTTP scheme owns fetching, caching,
+and resource access. This plugin supplies neither a new scheme nor an MCP server.
 
 ## Install and enable
 
-The package ships with the plurnk service as a default dependency, so an
-ordinary service install already carries it. To install it beside a service that
-does not:
+Install beside the service:
 
 ```sh
-npm install @plurnk/plurnk-schemes-http-tavily
+npm install @plurnk/plurnk-tavily-plugin --no-audit --no-fund
 ```
 
 ```text
-# ~/.plurnk/.env, read by the service
+# $XDG_CONFIG_HOME/plurnk/.env (normally ~/.config/plurnk/.env)
 PLURNK_SCHEMES_HTTP_MATERIALIZER=tavily-extract
-TAVILY_API_KEY=...
 ```
+
+Supply `TAVILY_API_KEY` through the service process environment. The package's
+`ai.plurnk/.env.defaults` supplies its configuration floor; operator environment and
+configuration files override that floor through the normal Plurnk cascade.
 
 A generic public HTML READ then keeps the exact server source as the page's
 `body` and lands the sanitized Tavily Markdown as its `#readable` channel; the
@@ -36,16 +37,22 @@ instead, and the page reads the same way.
 | `PLURNK_SCHEMES_HTTP_TAVILY_DEPTH` | `basic` or `advanced` |
 | `PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS` | Positive request timeout in ms |
 
+Invalid values raise the shared `ConfigurationError` naming the setting. Missing
+floor values are deployment errors; neither case silently selects a replacement.
+
 ## Contract
 
-`plurnk: { kind: "http-materializer", materializers: [{ id: "tavily-extract", module: "dist/materializer.js" }] }`
-exports one `HttpMaterializer` (`eligible`/`extract`) under the framework's
-discovery, trust, and one-flat-id-namespace rules. See
+`plugin.json#extensions.ai.plurnk` declares `kind: "http-materializer"` and one
+`HttpMaterializer` (`eligible`/`extract`). The HTTP family's existing npm discovery,
+lazy process-wide registry, trust policy and flat materializer namespace load it.
+This native capability requires npm installation; copying it into a user plugin
+folder is not sufficient. Client-specific files live in `ai.plurnk/`.
+There is no parallel npm capability manifest. See
 [SPEC.md](./SPEC.md) for the exact outcome mapping.
 
 ## Develop
 
 ```sh
-npm install   # links ../plurnk-service/plurnk-schemes-http for the plurnk-dev source
+npm install --no-audit --no-fund
 npm test
 ```

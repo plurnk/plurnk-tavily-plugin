@@ -2,11 +2,11 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "noEmit": false,
-        "outDir": "dist",
+        "outDir": "ai.plurnk/dist",
         "rootDir": "./src",
         "declaration": true,
         "sourceMap": false,
-        "allowImportingTsExtensions": false
+        "rewriteRelativeImportExtensions": true
     },
     "include": [
         "src/materializer.ts"

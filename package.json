@@ -1,48 +1,41 @@
 {
-    "name": "@plurnk/plurnk-schemes-http-tavily",
-    "version": "1.19.1",
-    "description": "Tavily Extract page materialization for plurnk's http scheme — the third-party pluggability showcase.",
+    "name": "@plurnk/plurnk-tavily-plugin",
+    "version": "1.25.0",
+    "description": "Agent Plugin supplying Tavily Extract page materialization through Plurnk's native extension interface.",
     "type": "module",
     "license": "MIT",
     "engines": {
         "node": ">=26"
     },
     "plurnk": {
-        "kind": "http-materializer",
-        "materializers": [
-            {
-                "id": "tavily-extract",
-                "module": "dist/materializer.js"
-            }
-        ],
-        "builtAgainst": "1.19.1"
+        "builtAgainst": "1.25.0"
     },
     "exports": {
-        ".": "./dist/materializer.js"
+        ".": "./ai.plurnk/dist/materializer.js"
     },
     "files": [
-        "dist/**/*",
-        ".env.defaults",
+        "plugin.json",
+        "ai.plurnk/**/*",
         "README.md",
         "SPEC.md"
     ],
     "scripts": {
         "test:lint": "tsc --noEmit",
-        "test:unit": "npm run build:dist && node --test --env-file=.env.defaults src/**/*.test.ts",
+        "test:unit": "npm run build:dist && node --test --env-file=ai.plurnk/.env.defaults src/**/*.test.ts",
         "test": "npm run test:lint && npm run test:unit",
-        "build:clean": "rm -rf dist",
+        "build:clean": "rm -rf ai.plurnk/dist",
         "build:dist": "tsc -p tsconfig.build.json",
         "build": "npm run build:clean && npm run build:dist",
         "prepack": "npm run build"
     },
     "dependencies": {
-        "@plurnk/plurnk-meta": "^1.19.1"
+        "@plurnk/plurnk-meta": "^1.25.0"
     },
     "peerDependencies": {
-        "@plurnk/plurnk-schemes-http": "^1.19.1"
+        "@plurnk/plurnk-schemes-http": "^1.25.0"
     },
     "devDependencies": {
-        "@plurnk/plurnk-schemes-http": "1.19.1",
+        "@plurnk/plurnk-schemes-http": "1.25.0",
         "@types/node": "^26.1.1",
         "typescript": "^7.0.2"
     }

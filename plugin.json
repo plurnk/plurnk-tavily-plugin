@@ -1,0 +1,15 @@
+{
+    "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+    "name": "plurnk-tavily-plugin",
+    "version": "1.25.0",
+    "description": "Tavily Extract page materialization for Plurnk's HTTP resources.",
+    "license": "MIT",
+    "extensions": {
+        "ai.plurnk": {
+            "kind": "http-materializer",
+            "materializers": [
+                { "id": "tavily-extract", "module": "ai.plurnk/dist/materializer.js" }
+            ]
+        }
+    }
+}

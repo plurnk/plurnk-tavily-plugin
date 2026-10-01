@@ -1,10 +1,10 @@
 // Tavily Extract page materialization for plurnk's http scheme.
-// {§http-materializer-plugins} — the third-party pluggability showcase: this
-// package declares `plurnk: { kind: "http-materializer" }`, the operator selects
+// {§tavily-plugin} — the HTTP family discovers this materializer; the operator selects
 // it with PLURNK_SCHEMES_HTTP_MATERIALIZER=tavily-extract, and WebFetcher consults
 // eligibility and extraction through the ordinary materializer contract.
 
 import type { HttpMaterializer, MaterializerProblem, MaterializerResult } from "@plurnk/plurnk-schemes-http/materializer";
+import { Knob } from "@plurnk/plurnk-meta";
 
 export const TAVILY_DEPTH = "PLURNK_SCHEMES_HTTP_TAVILY_DEPTH";
 export const TAVILY_TIMEOUT_MS = "PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS";
@@ -45,26 +45,9 @@ interface TavilyConfiguration {
     readonly identity: string;
 }
 
-const depth = (): TavilyDepth => {
-    const value = process.env[TAVILY_DEPTH];
-    if (value !== "basic" && value !== "advanced") {
-        throw new Error(`${TAVILY_DEPTH} must be "basic" or "advanced", got ${JSON.stringify(value)}.`);
-    }
-    return value;
-};
-
-const positiveInteger = (name: string): number => {
-    const raw = process.env[name];
-    const value = raw === undefined ? NaN : Number(raw);
-    if (!Number.isInteger(value) || value <= 0) {
-        throw new Error(`${name} must be a positive integer.`);
-    }
-    return value;
-};
-
 export const tavilyConfiguration = (): TavilyConfiguration | null => {
-    const configuredDepth = depth();
-    const timeoutMs = positiveInteger(TAVILY_TIMEOUT_MS);
+    const configuredDepth = Knob.choice(TAVILY_DEPTH, ["basic", "advanced"]);
+    const timeoutMs = Knob.integer(TAVILY_TIMEOUT_MS, 1);
     const apiKey = process.env.TAVILY_API_KEY?.trim() ?? "";
     if (apiKey.length === 0) return null;
     return {

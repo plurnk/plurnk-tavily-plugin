@@ -1,12 +1,13 @@
 // Hermetic materializer coverage: mocked global fetch, no network. The
-// composition test exercises the REAL discovery path — this package's manifest
-// and dist module through the framework's MaterializerRegistry + WebFetcher.
+// composition test discovers the declared built materializer through the HTTP family
+// and exercises extraction through the framework's WebFetcher.
 
 import test, { after, beforeEach } from "node:test";
 import { strict as assert } from "node:assert";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { materializer, tavilyConfiguration } from "./materializer.ts";
+import { validateManifest } from "@plurnk/plurnk-meta/agent-plugin";
 
 const originalKey = process.env.TAVILY_API_KEY;
 const originalDepth = process.env.PLURNK_SCHEMES_HTTP_TAVILY_DEPTH;
@@ -33,12 +34,18 @@ const withFetch = async (impl: typeof fetch, fn: () => Promise<void>) => {
 const resp = (body: string, status: number, headers: Record<string, string> = {}) =>
     new Response(body, { status, headers: { "content-type": "application/json", ...headers } });
 
-test("manifest: the package declares the http-materializer family with the tavily-extract id", async () => {
-    const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as {
-        plurnk: { kind: string; materializers: Array<{ id: string; module: string }> };
-    };
-    assert.equal(pkg.plurnk.kind, "http-materializer");
-    assert.deepEqual(pkg.plurnk.materializers, [{ id: "tavily-extract", module: "dist/materializer.js" }]);
+test("{§tavily-plugin} a standard plugin owns the native declaration; npm only delivers it", async () => {
+    const plugin = validateManifest(JSON.parse(await readFile(new URL("../plugin.json", import.meta.url), "utf8")));
+    assert.ok("manifest" in plugin);
+    assert.deepEqual(plugin.ignored, []);
+    assert.equal(plugin.manifest.name, "plurnk-tavily-plugin");
+    assert.deepEqual(plugin.manifest.extensions?.["ai.plurnk"], {
+        kind: "http-materializer",
+        materializers: [{ id: "tavily-extract", module: "ai.plurnk/dist/materializer.js" }],
+    });
+    const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+    assert.equal(pkg.name, "@plurnk/plurnk-tavily-plugin");
+    assert.equal(pkg.plurnk.kind, undefined, "no second native declaration");
 });
 
 test("eligibility: absence is the mode — no key means the local projection produces the body", () => {
@@ -54,7 +61,43 @@ test("eligibility: a configured key yields the depth-bearing identity", async ()
 
 test("eligibility: an invalid depth fails loudly, never guesses", () => {
     process.env.PLURNK_SCHEMES_HTTP_TAVILY_DEPTH = "automatic";
-    assert.throws(() => tavilyConfiguration(), /must be "basic" or "advanced"/);
+    assert.throws(() => tavilyConfiguration(), {
+        name: "ConfigurationError",
+        message: 'PLURNK_SCHEMES_HTTP_TAVILY_DEPTH must be one of basic, advanced; got "automatic".',
+    });
+});
+
+test("configuration: invalid operator settings identify their key as ConfigurationError", () => {
+    const cases = [
+        ["PLURNK_SCHEMES_HTTP_TAVILY_DEPTH", "automatic"],
+        ["PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS", ""],
+        ["PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS", "0"],
+        ["PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS", "-1"],
+        ["PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS", "1.5"],
+        ["PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS", "NaN"],
+        ["PLURNK_SCHEMES_HTTP_TAVILY_TIMEOUT_MS", "9007199254740992"],
+    ];
+    for (const [key, value] of cases) {
+        const original = process.env[key];
+        try {
+            process.env[key] = value;
+            assert.throws(() => tavilyConfiguration(), {
+                name: "ConfigurationError",
+                key,
+            }, `${key}=${JSON.stringify(value)} must remain a repairable configuration error`);
+        } finally {
+            if (original === undefined) delete process.env[key];
+            else process.env[key] = original;
+        }
+    }
+});
+
+test("configuration: a missing floor is an internal error, not guessed configuration", () => {
+    delete process.env.PLURNK_SCHEMES_HTTP_TAVILY_DEPTH;
+    assert.throws(() => tavilyConfiguration(), {
+        name: "Error",
+        message: "PLURNK_SCHEMES_HTTP_TAVILY_DEPTH is missing from the assembled environment floor.",
+    });
 });
 
 test("extract: success requires Markdown plus request_id and usage.credits evidence", async () => {
@@ -118,19 +161,55 @@ test("extract: a malformed success is hard and never invents a body", async () =
     });
 });
 
-test("composition: the framework registry discovers this package and routes HTML bodies through it", async () => {
+test("{§tavily-materializer} cancellation before or during extraction preserves the caller's reason", async () => {
+    process.env.TAVILY_API_KEY = "tvly-test";
+    const reason = new Error("caller cancelled extraction");
+    const aborted = AbortSignal.abort(reason);
+    await withFetch((async () => { throw new Error("cancelled calls must not reach fetch"); }) as typeof fetch, async () => {
+        await assert.rejects(materializer.extract("https://example.com/x", { signal: aborted }), (cause) => cause === reason);
+    });
+    const controller = new AbortController();
+    await withFetch((async (_input, init) => {
+        controller.abort(reason);
+        assert.equal(init?.signal?.aborted, true);
+        throw init?.signal?.reason;
+    }) as typeof fetch, async () => {
+        await assert.rejects(materializer.extract("https://example.com/x", { signal: controller.signal }), (cause) => cause === reason);
+    });
+});
+
+test("{§tavily-materializer} provider request preserves the exact URL, configured depth and usage request", async () => {
+    process.env.TAVILY_API_KEY = "tvly-test";
+    process.env.PLURNK_SCHEMES_HTTP_TAVILY_DEPTH = "advanced";
+    const url = "https://example.com/page?a=1&b=2";
+    await withFetch((async (input, init) => {
+        assert.equal(input, "https://api.tavily.com/extract");
+        assert.equal(init?.method, "POST");
+        assert.deepEqual(JSON.parse(String(init?.body)), {
+            urls: [url], extract_depth: "advanced", format: "markdown", include_usage: true,
+        });
+        assert.equal(new Headers(init?.headers).get("authorization"), "Bearer tvly-test");
+        return resp(JSON.stringify({ results: [{ url, markdown: "body" }], request_id: "req-exact", usage: { credits: 0 } }), 200);
+    }) as typeof fetch, async () => {
+        const result = await materializer.extract(url, {});
+        assert.equal(result.outcome, "success");
+        assert.equal(result.identity, "tavily-extract:v1:advanced");
+        assert.ok(result.evidence.some(({ name, value }) => name === "x-plurnk-tavily-credits" && value === "0"));
+    });
+});
+
+test("composition: native family discovery supplies HTTP extraction without daemon lifecycle hooks", async () => {
     process.env.TAVILY_API_KEY = "tvly-test";
     process.env.PLURNK_SCHEMES_HTTP_MATERIALIZER = "tavily-extract";
     process.env.PLURNK_SCHEMES_HTTP_FETCH_TIMEOUT = "30000";
     process.env.PLURNK_SCHEMES_HTTP_REDIRECTS = "5";
     process.env.PLURNK_SCHEMES_HTTP_ERROR_DETAIL_LIMIT = "512";
-    process.env.PLURNK_SCHEMES_HTTP_USER_AGENT = "plurnk-schemes-http-tavily/test";
+    process.env.PLURNK_SCHEMES_HTTP_USER_AGENT = "plurnk-tavily-plugin/test";
     const { default: MaterializerRegistry } = await import("@plurnk/plurnk-schemes-http/materializer");
     const { WebFetcher } = await import("@plurnk/plurnk-schemes-http");
     const pkgDir = resolve(import.meta.dirname, "..");
-    await MaterializerRegistry.current().discover({
-        packageDirs: [{ dir: pkgDir, name: "@plurnk/plurnk-schemes-http-tavily" }],
-    });
+    await MaterializerRegistry.current().discover({ packageDirs: [{ dir: pkgDir, name: "@plurnk/plurnk-tavily-plugin" }] });
+    assert.ok(MaterializerRegistry.current().materializerFor("tavily-extract"));
     const projection = {
         async readable() { return null; },
         async binary(chunks: AsyncIterable<Uint8Array>) {
