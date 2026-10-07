@@ -2,7 +2,7 @@
 
 This package is a third-party materializer plugin for
 `@plurnk/plurnk-schemes-http`. The owning contract is the framework's
-`{§http-materializer-plugins}`; this document states the plugin's own
+`{§http-materializer-extensions}`; this document states the plugin's own
 behavior.
 
 ## §tavily-plugin Plugin packaging
@@ -18,6 +18,9 @@ behavior.
 Native loading uses the HTTP family's npm discovery and lazy process-wide registry,
 not a daemon module. This package must be installed through npm, not merely copied
 into a user plugin directory. Daemon creation and shutdown do not alter its registration.
+The package's installation gate packs and installs it independently, then verifies
+ordinary npm discovery, the shipped configuration floor, and explicit credential
+eligibility through the public HTTP framework.
 
 ## §tavily-materializer Materializer behavior
 

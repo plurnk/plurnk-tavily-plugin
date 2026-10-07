@@ -45,7 +45,7 @@ test("{§tavily-plugin} a standard plugin owns the native declaration; npm only 
     });
     const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
     assert.equal(pkg.name, "@plurnk/plurnk-tavily-plugin");
-    assert.equal(pkg.plurnk.kind, undefined, "no second native declaration");
+    assert.equal(pkg.plurnk?.kind, undefined, "no second native declaration");
 });
 
 test("eligibility: absence is the mode — no key means the local projection produces the body", () => {

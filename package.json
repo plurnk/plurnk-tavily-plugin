@@ -1,14 +1,11 @@
 {
     "name": "@plurnk/plurnk-tavily-plugin",
-    "version": "1.25.0",
+    "version": "2.0.0",
     "description": "Agent Plugin supplying Tavily Extract page materialization through Plurnk's native extension interface.",
     "type": "module",
     "license": "MIT",
     "engines": {
         "node": ">=26"
-    },
-    "plurnk": {
-        "builtAgainst": "1.25.0"
     },
     "exports": {
         ".": "./ai.plurnk/dist/materializer.js"
@@ -23,20 +20,27 @@
         "test:lint": "tsc --noEmit",
         "test:unit": "npm run build:dist && node --test --env-file=ai.plurnk/.env.defaults src/**/*.test.ts",
         "test": "npm run test:lint && npm run test:unit",
+        "test:installation": "node scripts/test-installation.mjs",
+        "release:gate": "npm run test:installation",
         "build:clean": "rm -rf ai.plurnk/dist",
         "build:dist": "tsc -p tsconfig.build.json",
         "build": "npm run build:clean && npm run build:dist",
         "prepack": "npm run build"
     },
     "dependencies": {
-        "@plurnk/plurnk-meta": "^1.25.0"
+        "@plurnk/plurnk-meta": "^2.0.0"
     },
     "peerDependencies": {
-        "@plurnk/plurnk-schemes-http": "^1.25.0"
+        "@plurnk/plurnk-schemes-http": "^2.0.0"
     },
     "devDependencies": {
-        "@plurnk/plurnk-schemes-http": "1.25.0",
+        "@plurnk/plurnk-schemes-http": "^2.0.0",
         "@types/node": "^26.1.1",
         "typescript": "^7.0.2"
-    }
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/plurnk/plurnk-tavily-plugin.git"
+    },
+    "homepage": "https://github.com/plurnk/plurnk-tavily-plugin#readme"
 }
